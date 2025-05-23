@@ -6,3 +6,4 @@ All C# code changes must comply with these guidelines:
 * Avoid adding NuGet packages, except for dependencies used exclusively by the test suite.
 * Ignore NetworkLabyrinth (it's only there to look how the oritional, networked version was implemented) and only work on OfflineLabyrinth.
 * Use .NET 8.
+* Please not that you are offline. The test suite has been made availabe, but you can't check online for other/new packages.
