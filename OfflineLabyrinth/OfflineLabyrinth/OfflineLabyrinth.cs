@@ -22,11 +22,11 @@ public class OfflineLabyrinth : IDisposable
         var serverOutQueue = new SimpleChannel<byte[]>();
 
         // start lag processing tasks
-        _ = ProcessOutgoing(clientOutQueue.Reader, serverIn.Writer, lagMilliseconds, _cts.Token);
-        _ = ProcessOutgoing(serverOutQueue.Reader, clientIn.Writer, lagMilliseconds, _cts.Token);
+        _ = ProcessOutgoing(clientOutQueue.ReaderEnd, serverIn.WriterEnd, lagMilliseconds, _cts.Token);
+        _ = ProcessOutgoing(serverOutQueue.ReaderEnd, clientIn.WriterEnd, lagMilliseconds, _cts.Token);
 
-        _clientStream = new LagStream(clientIn.Reader, clientOutQueue.Writer, _cts.Token);
-        var serverStream = new LagStream(serverIn.Reader, serverOutQueue.Writer, _cts.Token);
+        _clientStream = new LagStream(clientIn.ReaderEnd, clientOutQueue.WriterEnd, _cts.Token);
+        var serverStream = new LagStream(serverIn.ReaderEnd, serverOutQueue.WriterEnd, _cts.Token);
 
         // run server session
         _serverTask = Task.Run(() => Session.Run(serverStream, _cts.Token));
@@ -121,14 +121,16 @@ internal class SimpleChannel<T>
     private readonly Queue<T> _queue = new();
     private readonly SemaphoreSlim _signal = new(0);
     private bool _completed;
+    private readonly Reader _readerEnd;
+    private readonly Writer _writerEnd;
 
-    public Reader Reader { get; }
-    public Writer Writer { get; }
+    public Reader ReaderEnd { get { return _readerEnd; } }
+    public Writer WriterEnd { get { return _writerEnd; } }
 
     public SimpleChannel()
     {
-        Reader = new Reader(this);
-        Writer = new Writer(this);
+        _readerEnd = new Reader(this);
+        _writerEnd = new Writer(this);
     }
 
     public class Reader

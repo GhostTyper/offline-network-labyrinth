@@ -24,9 +24,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Restore dependencies
-        run: dotnet restore OfflineLabyrinth.sln
+        run: dotnet restore OfflineLabyrinth/OfflineLabyrinth.sln
       - name: Build
-        run: dotnet build OfflineLabyrinth.sln --no-restore --configuration Release
+        run: dotnet build OfflineLabyrinth/OfflineLabyrinth.sln --no-restore --configuration Release
       - name: Test
-        run: dotnet test OfflineLabyrinth.sln --no-build --configuration Release
+        run: timeout 30s dotnet test OfflineLabyrinth/OfflineLabyrinth.sln --no-build --configuration Release
 
