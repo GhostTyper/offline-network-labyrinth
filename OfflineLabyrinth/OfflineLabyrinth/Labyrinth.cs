@@ -259,7 +259,7 @@ namespace OfflineLabyrinth
                     nodes.Enqueue(new Node(current.W + 1, current.H, current.D, current));
                 }
 
-                if (current.H > 0 && ((data[current.D, current.H - 1, current.W] & 0b101) == 0 || (data[current.D, current.H - 1, current.W] & 0b010) == 0b110))
+                if (current.H > 0 && ((data[current.D, current.H - 1, current.W] & 0b101) == 0 || (data[current.D, current.H - 1, current.W] & 0b110) == 0b010))
                 {
                     data[current.D, current.H - 1, current.W] |= 0b100;
                     nodes.Enqueue(new Node(current.W, current.H - 1, current.D, current));
