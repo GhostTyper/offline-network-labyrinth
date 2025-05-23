@@ -1,0 +1,32 @@
+name: .NET
+
+on:
+  push:
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - '.github/workflows/dotnet.yml'
+  pull_request:
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - '.github/workflows/dotnet.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore OfflineLabyrinth.sln
+      - name: Build
+        run: dotnet build OfflineLabyrinth.sln --no-restore --configuration Release
+      - name: Test
+        run: dotnet test OfflineLabyrinth.sln --no-build --configuration Release
+
