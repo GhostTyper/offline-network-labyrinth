@@ -1,8 +1,9 @@
 using System;
 using System.IO;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace OfflineLabyrinth;
 
@@ -15,10 +16,10 @@ public class OfflineLabyrinth : IDisposable
     public OfflineLabyrinth(int lagMilliseconds)
     {
         // channels for communication
-        var clientIn = Channel.CreateUnbounded<byte>();
-        var clientOutQueue = Channel.CreateUnbounded<byte[]>();
-        var serverIn = Channel.CreateUnbounded<byte>();
-        var serverOutQueue = Channel.CreateUnbounded<byte[]>();
+        var clientIn = new SimpleChannel<byte>();
+        var clientOutQueue = new SimpleChannel<byte[]>();
+        var serverIn = new SimpleChannel<byte>();
+        var serverOutQueue = new SimpleChannel<byte[]>();
 
         // start lag processing tasks
         _ = ProcessOutgoing(clientOutQueue.Reader, serverIn.Writer, lagMilliseconds, _cts.Token);
@@ -33,7 +34,7 @@ public class OfflineLabyrinth : IDisposable
 
     public Stream Stream => _clientStream;
 
-    private static async Task ProcessOutgoing(ChannelReader<byte[]> source, ChannelWriter<byte> target, int lag, CancellationToken token)
+    private static async Task ProcessOutgoing(SimpleChannel<byte[]>.Reader source, SimpleChannel<byte>.Writer target, int lag, CancellationToken token)
     {
         await foreach (var msg in source.ReadAllAsync(token))
         {
@@ -53,11 +54,11 @@ public class OfflineLabyrinth : IDisposable
 
 internal class LagStream : Stream
 {
-    private readonly ChannelReader<byte> _reader;
-    private readonly ChannelWriter<byte[]> _writer;
+    private readonly SimpleChannel<byte>.Reader _reader;
+    private readonly SimpleChannel<byte[]>.Writer _writer;
     private readonly CancellationToken _token;
 
-    public LagStream(ChannelReader<byte> reader, ChannelWriter<byte[]> writer, CancellationToken token)
+    public LagStream(SimpleChannel<byte>.Reader reader, SimpleChannel<byte[]>.Writer writer, CancellationToken token)
     {
         _reader = reader;
         _writer = writer;
@@ -112,6 +113,81 @@ internal class LagStream : Stream
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         await WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken);
+    }
+}
+
+internal class SimpleChannel<T>
+{
+    private readonly Queue<T> _queue = new();
+    private readonly SemaphoreSlim _signal = new(0);
+    private bool _completed;
+
+    public Reader Reader { get; }
+    public Writer Writer { get; }
+
+    public SimpleChannel()
+    {
+        Reader = new Reader(this);
+        Writer = new Writer(this);
+    }
+
+    public class Reader
+    {
+        private readonly SimpleChannel<T> _parent;
+        internal Reader(SimpleChannel<T> parent) { _parent = parent; }
+
+        public int ReaderCount { get { lock (_parent._queue) return _parent._queue.Count; } }
+
+        public async ValueTask<T> ReadAsync(CancellationToken token = default)
+        {
+            await _parent._signal.WaitAsync(token);
+            lock (_parent._queue)
+            {
+                if (_parent._queue.Count > 0)
+                    return _parent._queue.Dequeue();
+                if (_parent._completed)
+                    throw new InvalidOperationException();
+            }
+            return await ReadAsync(token);
+        }
+
+        public async IAsyncEnumerable<T> ReadAllAsync([EnumeratorCancellation] CancellationToken token = default)
+        {
+            while (true)
+            {
+                T item;
+                try
+                {
+                    item = await ReadAsync(token);
+                }
+                catch (InvalidOperationException)
+                {
+                    yield break;
+                }
+                yield return item;
+            }
+        }
+    }
+
+    public class Writer
+    {
+        private readonly SimpleChannel<T> _parent;
+        internal Writer(SimpleChannel<T> parent) { _parent = parent; }
+
+        public ValueTask WriteAsync(T item, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            lock (_parent._queue)
+                _parent._queue.Enqueue(item);
+            _parent._signal.Release();
+            return ValueTask.CompletedTask;
+        }
+
+        public void Complete()
+        {
+            _parent._completed = true;
+            _parent._signal.Release();
+        }
     }
 }
 
