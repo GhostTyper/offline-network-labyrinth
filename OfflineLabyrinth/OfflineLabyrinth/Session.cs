@@ -53,11 +53,11 @@ internal static class Session
                              "0 disconnect when you want to stop playing.\r\n" +
                              "0 ");
 
+            writer.WriteLine($"9 [W:{width};H:{height};D:{depth};M={mem((long)width * height * depth)}]>");
+            writer.Flush();
+
             while (!start && !token.IsCancellationRequested)
             {
-                writer.Write($"9 [W:{width};H:{height};D:{depth};M={mem((long)width * height * depth)}]>");
-                writer.Flush();
-
                 try
                 {
                     var line = reader.ReadLine();
@@ -73,28 +73,40 @@ internal static class Session
                 {
                     case "width":
                         if (command.Parameter < 32 || command.Parameter > 65536)
+                        {
                             writer.WriteLine("5 Parameter out of bounds. Use a value between [32 and 65536].");
+                            writer.Flush();
+                        }
                         else
                         {
                             writer.WriteLine($"2 OK.");
+                            writer.Flush();
                             width = command.Parameter;
                         }
                         break;
                     case "height":
                         if (command.Parameter < 32 || command.Parameter > 65536)
+                        {
                             writer.WriteLine("5 Parameter out of bounds. Use a value between [32 and 65536].");
+                            writer.Flush();
+                        }
                         else
                         {
                             writer.WriteLine($"2 OK.");
+                            writer.Flush();
                             height = command.Parameter;
                         }
                         break;
                     case "depth":
                         if (command.Parameter < 1 || command.Parameter > 16)
+                        {
                             writer.WriteLine("5 Parameter out of bounds. Use a value between [1 and 16].");
+                            writer.Flush();
+                        }
                         else
                         {
                             writer.WriteLine($"2 OK.");
+                            writer.Flush();
                             depth = command.Parameter;
                         }
                         break;
@@ -110,8 +122,10 @@ internal static class Session
                         break;
                     default:
                         writer.WriteLine("5 Unknown command. Use WIDTH ?, HEIGHT ?, DEPTH ? or START.");
+                        writer.Flush();
                         break;
                 }
+
             }
 
             if (!start || token.IsCancellationRequested)
@@ -182,14 +196,12 @@ internal static class Session
             checkLabyrinth = null;
             labyrinth!.ClearRoutes();
             writer.WriteLine($"2 READY.");
+            writer.Flush();
 
             Stopwatch stopWatch = Stopwatch.StartNew();
 
             while (start && !token.IsCancellationRequested)
             {
-                writer.Write($"9 [X:{labyrinth.W};Y:{labyrinth.H};Z:{labyrinth.D}]>");
-                writer.Flush();
-
                 try
                 {
                     gameCommand = reader.ReadLine();
@@ -204,25 +216,37 @@ internal static class Session
                 {
                     case "up":
                         if (labyrinth.Up())
+                        {
                             writer.WriteLine("2 DONE.");
+                            writer.Flush();
+                        }
                         else
                             writer.WriteLine("5 You can't enter that tile.");
                         break;
                     case "down":
                         if (labyrinth.Down())
+                        {
                             writer.WriteLine("2 DONE.");
+                            writer.Flush();
+                        }
                         else
                             writer.WriteLine("5 You can't enter that tile.");
                         break;
                     case "left":
                         if (labyrinth.Left())
+                        {
                             writer.WriteLine("2 DONE.");
+                            writer.Flush();
+                        }
                         else
                             writer.WriteLine("5 You can't enter that tile.");
                         break;
                     case "right":
                         if (labyrinth.Right())
+                        {
                             writer.WriteLine("2 DONE.");
+                            writer.Flush();
+                        }
                         else
                             writer.WriteLine("5 You can't enter that tile.");
                         break;
@@ -233,17 +257,23 @@ internal static class Session
                             break;
                         }
                         if (labyrinth.Enter())
+                        {
                             writer.WriteLine("2 DONE.");
+                            writer.Flush();
+                        }
                         else
                             writer.WriteLine("5 You can't enter that tile.");
                         break;
                     case "print":
                         writer.WriteLine(labyrinth.Print());
+                        writer.Flush();
                         break;
                     default:
                         writer.WriteLine($"5 Unknown command.");
+                        writer.Flush();
                         break;
                 }
+
             }
 
             stopWatch.Stop();
