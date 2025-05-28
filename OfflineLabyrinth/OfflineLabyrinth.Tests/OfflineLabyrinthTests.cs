@@ -69,4 +69,36 @@ public class OfflineLabyrinthTests
 
         Assert.True(sw.ElapsedMilliseconds >= lag, $"Expected at least {lag}ms lag but got {sw.ElapsedMilliseconds}ms");
     }
+
+    [Fact]
+    public async Task TooLargeLabyrinthIsRejected()
+    {
+        using OfflineLabyrinth.OfflineLabyrinth lab = new OfflineLabyrinth.OfflineLabyrinth(0);
+        using StreamWriter writer = new StreamWriter(lab.Stream) { NewLine = "\r\n", AutoFlush = true };
+        using StreamReader reader = new StreamReader(lab.Stream);
+
+        for (int i = 0; i < 20; i++)
+        {
+            string? skipLine = await reader.ReadLineAsync();
+            if (skipLine == null || skipLine.StartsWith("9 ")) break;
+        }
+
+        await writer.WriteLineAsync("WIDTH 4096");
+        string? response = await reader.ReadLineAsync();
+        Assert.StartsWith("2", response);
+
+        await writer.WriteLineAsync("HEIGHT 4096");
+        response = await reader.ReadLineAsync();
+        Assert.StartsWith("2", response);
+
+        await writer.WriteLineAsync("DEPTH 2");
+        response = await reader.ReadLineAsync();
+        Assert.StartsWith("2", response);
+
+        await writer.WriteLineAsync("START");
+        await writer.WriteLineAsync("WIDTH 32");
+        response = await reader.ReadLineAsync();
+        Assert.Equal("5 The labyrinth you have chosen requires 32MB of RAM. (Max=16MB.)", response);
+        await reader.ReadLineAsync(); // consume response to WIDTH 32
+    }
 }
