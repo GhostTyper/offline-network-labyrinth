@@ -28,5 +28,5 @@ jobs:
       - name: Build
         run: dotnet build OfflineLabyrinth/OfflineLabyrinth.sln --no-restore --configuration Release
       - name: Test
-        run: timeout 30s dotnet test OfflineLabyrinth/OfflineLabyrinth.sln --no-build --configuration Release
+        run: timeout 30s dotnet test OfflineLabyrinth/OfflineLabyrinth.sln --no-build --configuration Release --logger "console;verbosity=detailed"
 
