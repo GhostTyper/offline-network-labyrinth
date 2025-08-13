@@ -3,12 +3,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 public class OfflineLabyrinthTests
 {
+    private readonly ITestOutputHelper output;
+
+    public OfflineLabyrinthTests(ITestOutputHelper output)
+    {
+        this.output = output;
+    }
     [Fact]
     public async Task PrintCommandProducesOutput()
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
         using var lab = new OfflineLabyrinth.OfflineLabyrinth(0);
         using var writer = new StreamWriter(lab.Stream) { NewLine = "\r\n", AutoFlush = true };
         using var reader = new StreamReader(lab.Stream);
@@ -45,11 +53,14 @@ public class OfflineLabyrinthTests
         await writer.WriteLineAsync("PRINT");
         var printLine = await reader.ReadLineAsync();
         Assert.True(printLine!.StartsWith("3 ")); // position line
+        stopwatch.Stop();
+        this.output.WriteLine("PrintCommandProducesOutput took " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
     [Fact]
     public async Task LagIsEnforced()
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
         const int lag = 50;
         using var lab = new OfflineLabyrinth.OfflineLabyrinth(lag);
         using var writer = new StreamWriter(lab.Stream) { NewLine = "\r\n", AutoFlush = true };
@@ -68,11 +79,14 @@ public class OfflineLabyrinthTests
         sw.Stop();
 
         Assert.True(sw.ElapsedMilliseconds >= lag, $"Expected at least {lag}ms lag but got {sw.ElapsedMilliseconds}ms");
+        stopwatch.Stop();
+        this.output.WriteLine("LagIsEnforced took " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
     [Fact]
     public async Task TooLargeLabyrinthIsRejected()
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
         using OfflineLabyrinth.OfflineLabyrinth lab = new OfflineLabyrinth.OfflineLabyrinth(0);
         using StreamWriter writer = new StreamWriter(lab.Stream) { NewLine = "\r\n", AutoFlush = true };
         using StreamReader reader = new StreamReader(lab.Stream);
@@ -100,5 +114,7 @@ public class OfflineLabyrinthTests
         response = await reader.ReadLineAsync();
         Assert.Equal("5 The labyrinth you have chosen requires 32MB of RAM. (Max=16MB.)", response);
         await reader.ReadLineAsync(); // consume response to WIDTH 32
+        stopwatch.Stop();
+        this.output.WriteLine("TooLargeLabyrinthIsRejected took " + stopwatch.ElapsedMilliseconds + "ms");
     }
 }
